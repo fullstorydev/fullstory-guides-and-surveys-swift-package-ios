@@ -12,8 +12,8 @@ let package = Package(
     targets: [
         .binaryTarget(
             name: "FullstoryGuidesAndSurveys",
-            url: "https://github.com/fullstorydev/fullstory-guides-and-surveys-swift-package-ios/releases/download/0.1.0/FullstoryGuidesAndSurveys-0.1.0-xcframework.zip",
-            checksum: "ee0716ebbd0f1fbcfd6a1bee47cf7bc87ea805cbecab00e532e3000c5a0d5c59"
+            url: "https://github.com/fullstorydev/fullstory-guides-and-surveys-swift-package-ios/releases/download/0.1.1/FullstoryGuidesAndSurveys-0.1.1-xcframework.zip",
+            checksum: "e966f05595b9608a59ab8b0bd479b17e79fc9022d4607e9bbff330dc45f488b9"
         ),
     ]
 )
