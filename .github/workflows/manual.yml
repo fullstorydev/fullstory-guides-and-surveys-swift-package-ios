@@ -16,6 +16,11 @@ jobs:
   check-version:
     runs-on: ubuntu-latest
 
+    # The job commits and tags, so it needs a write token. New repos default to
+    # a read-only one, so ask for write here instead of relying on the setting.
+    permissions:
+      contents: write
+
     steps:
     - uses: actions/checkout@v6
       with:
