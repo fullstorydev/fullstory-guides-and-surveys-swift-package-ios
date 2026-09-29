@@ -1,0 +1,60 @@
+# This workflow checks to see if there is a newer version of the Fullstory Guides and Surveys
+# SDK that is not listed in this repository.
+# If a newer version exists, it updates the Package.swift file, commits the changes, and tags
+# the change with the new version.
+
+name: Update Swift Package Version
+on:
+  # Allow manually triggering this workflow.
+  workflow_dispatch:
+  # Check every day at 2000 UTC, which is 3PM EST, 4PM EDT.
+  # Fullstory releases generally go live at 2PM ET.
+  schedule:
+    - cron: '0 20 * * *'
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+
+    # The job commits and tags, so it needs a write token. New repos default to
+    # a read-only one, so ask for write here instead of relying on the setting.
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        # Fetch all tags
+        fetch-depth: 0
+    - name: Check for newer release
+      run: |
+        version=$(curl -sSf "https://ios-releases.fullstory.com/guides-and-surveys/VERSION" || true)
+        if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "Error fetching current release version!"
+          exit 1;
+        fi
+        echo "Current Guides and Surveys iOS release version: $version"
+        if [ $(git tag -l "$version") ]; then
+          echo "Version $version exists in this repo, nothing to do."
+          exit 0
+        fi
+        echo "Tag not found, updating repo."
+
+        # Fetch the Package.swift for this version.
+        curl -sSf "https://ios-releases.fullstory.com/guides-and-surveys/FullstoryGuidesAndSurveys-${version}-Package.swift" > Package.swift
+
+        # Don't commit and tag an error page if the download failed.
+        if ! grep -q "swift-tools-version" Package.swift; then
+          echo "Downloaded Package.swift for ${version} doesn't look like a Swift manifest!"
+          git checkout Package.swift
+          exit 1
+        fi
+
+        # Commit the changes, tag them, push it all.
+        # This bot account is the one GitHub recommends for actions that push commits.
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add Package.swift
+        git commit -m "Update package for ${version} release"
+        git tag $version
+        git push --tags origin master
