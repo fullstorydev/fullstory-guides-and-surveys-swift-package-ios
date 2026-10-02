@@ -5,8 +5,14 @@
 
 name: Update Swift Package Version
 on:
-  # Allow manually triggering this workflow.
+  # Allow manually triggering this workflow. The Fullstory deploy also runs it right
+  # after an iOS release goes out, passing in the version it just released.
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to tag, like 1.2.3. Leave empty to use the latest release.'
+        required: false
+        type: string
   # Check every day at 2000 UTC, which is 3PM EST, 4PM EDT.
   # Fullstory releases generally go live at 2PM ET.
   schedule:
@@ -27,13 +33,22 @@ jobs:
         # Fetch all tags
         fetch-depth: 0
     - name: Check for newer release
+      env:
+        INPUT_VERSION: ${{ inputs.version }}
       run: |
-        version=$(curl -sSf "https://ios-releases.fullstory.com/guides-and-surveys/VERSION" || true)
+        # The CDN can serve a cached copy for up to an hour, so add a query string
+        # to make sure we get the latest file.
+        nocache="nocache=$(date +%s)"
+
+        version="$INPUT_VERSION"
+        if [[ -z "$version" ]]; then
+          version=$(curl -sSf "https://ios-releases.fullstory.com/guides-and-surveys/VERSION?${nocache}" || true)
+        fi
         if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "Error fetching current release version!"
+          echo "Error getting the release version! Got: '${version}'"
           exit 1;
         fi
-        echo "Current Guides and Surveys iOS release version: $version"
+        echo "Guides and Surveys iOS release version: $version"
         if [ $(git tag -l "$version") ]; then
           echo "Version $version exists in this repo, nothing to do."
           exit 0
@@ -41,7 +56,7 @@ jobs:
         echo "Tag not found, updating repo."
 
         # Fetch the Package.swift for this version.
-        curl -sSf "https://ios-releases.fullstory.com/guides-and-surveys/FullstoryGuidesAndSurveys-${version}-Package.swift" > Package.swift
+        curl -sSf "https://ios-releases.fullstory.com/guides-and-surveys/FullstoryGuidesAndSurveys-${version}-Package.swift?${nocache}" > Package.swift
 
         # Don't commit and tag an error page if the download failed.
         if ! grep -q "swift-tools-version" Package.swift; then
